@@ -1,9 +1,10 @@
 import rpy2.robjects as robjects
 import numpy as np
 import pandas as pd
-import gym
-from gym import spaces
-from gym.utils import seeding
+# import gym
+import gymnasium as gym
+from gymnasium import spaces
+from gymnasium.utils import seeding
 
 class MCPModEnv(gym.Env):
     def __init__(self, config):
@@ -94,7 +95,8 @@ class MCPModEnv(gym.Env):
             info = {}
             reward = 0
         info.update(**{'dose': self.doses, 'resp': self.resps})
-        return self._get_obs(), reward, done, info
+        truncated = False
+        return self._get_obs(), reward, done, truncated, info
 
     def _get_obs(self):
         df = pd.DataFrame(self.resps).groupby(self.doses)
@@ -105,7 +107,7 @@ class MCPModEnv(gym.Env):
         draw_ratios = counts / self.N_total
         return np.hstack([diffs, stds, draw_ratios])
 
-    def reset(self):
+    def reset(self, *, seed=None, options=None):
         if self.model_type == 'random':
             self.model_name = self.np_random.choice(['linear', 'emax', 'sigEmax'])
         else:
@@ -127,4 +129,4 @@ class MCPModEnv(gym.Env):
         self.resps_true = np.array(robjects.r['resps_true'])
         self.doses = np.repeat([np.arange(self.D)], self.N_ini / self.D).tolist()
         self.resps = self.np_random.normal(self.resps_true[self.doses], self.SD).tolist()
-        return self._get_obs()
+        return self._get_obs(), {}

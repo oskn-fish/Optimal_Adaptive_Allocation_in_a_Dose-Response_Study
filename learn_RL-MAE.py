@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
-import gym
+# import gym
+import gymnasium as gym
 import ray
-from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
+# from ray.rllib.agents.ppo import PPOTrainer, DEFAULT_CONFIG
+from ray.rllib.algorithms.ppo import PPO, PPOConfig
 import rpy2.robjects as robjects
 import MCPMod
 from ray.tune.registry import register_env
@@ -10,23 +12,36 @@ from MCPMod.envs.MCPModEnv import MCPModEnv
 
 ENV_NAME = 'MCPMod-v0'
 register_env(ENV_NAME, lambda config: MCPModEnv(config))
-config = DEFAULT_CONFIG.copy()
+# config = DEFAULT_CONFIG.copy()
 
 ## hyperparameter settings
-config['seed'] = 123
-config['gamma'] = 1.0
-config['framework'] = 'torch'
-config['num_workers'] = 4
-config['num_sgd_iter'] = 20
-config['num_cpus_per_worker'] = 1
-config['sgd_minibatch_size'] = 200
-config['train_batch_size'] = 10000
+config = PPOConfig()
+# config['seed'] = 123
+config = config.debugging(seed = 123)
+# config['gamma'] = 1.0
+config = config.training(gamma=1.0)
+# config['framework'] = 'torch'
+config = config.framework("torch")
+# config['num_workers'] = 4
+config = config.rollouts(num_rollout_workers=0)
+# config['num_sgd_iter'] = 20
+config = config.training(num_sgd_iter=20)
+# config['num_cpus_per_worker'] = 1
+config = config.resources(num_cpus_per_worker=1)
+# config['sgd_minibatch_size'] = 200
+config = config.training(sgd_minibatch_size=200)
+# config['train_batch_size'] = 10000
+config = config.training(train_batch_size=10000)
 
 ## simulation settings
-config['env_config'] = {'reward_type':'score_MAE', 'model_type':'random', 'max_eff':1.65, 'alpha':0.025}
+# config['env_config'] = {'reward_type':'score_MAE', 'model_type':'random', 'max_eff':1.65, 'alpha':0.025}
+config.environment(env=MCPModEnv, 
+                  env_config={'reward_type':'score_MAE', 'model_type':'random', 'max_eff':1.65, 'alpha':0.025}
+                  )
 
 ray.init(ignore_reinit_error=True, log_to_driver=False)
-agent = PPOTrainer(config, ENV_NAME)
+# agent = PPOTrainer(config, ENV_NAME)
+agent = config.build()
 
 N_update = 1000
 results = []
